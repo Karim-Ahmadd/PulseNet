@@ -1,3 +1,10 @@
-h1{
-    color: blue;
+@import url('https://fonts.googleapis.com/css2?family=Manjari:wght@100;400;700&display=swap');
+body {
+
+    font-family: "Manjari", sans-serif;
+    font-weight: 700;
+    font-style: normal;
+}
+h1,h3{
+    font-weight: 700;
 }

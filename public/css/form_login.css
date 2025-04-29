@@ -1,0 +1,40 @@
+.form{
+    padding: 7% 5%;
+    
+}
+
+.form-h3{
+    text-align: center;
+}
+
+
+.btn-container{
+    text-align: center;
+}
+
+hr{
+	margin: 4% 0;
+	background-color: black;
+}
+
+.myButton {
+	background-color:#44c767;
+	border-radius:28px;
+	display:inline-block;
+	cursor:pointer;
+	color:#ffffff;
+	font-family:Trebuchet MS;
+	font-size:1.2rem;
+	padding:15px 15%;
+	text-decoration:none;
+	text-shadow:0px 1px 0px #2f6627;
+    border: none;
+    margin: 20px;
+}
+.myButton:hover {
+	background-color:#5cbf2a;
+}
+.myButton:active {
+	position:relative;
+	top:1px;
+}
