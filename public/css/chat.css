@@ -1,0 +1,49 @@
+body{
+    height: 100vh;
+  }
+
+.chat{
+    flex-grow: 1;
+    overflow: scroll;
+    height: 80%;
+}
+span {
+    border: 1px solid grey;
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 20%;
+    color: white;
+  
+  }
+  
+  div.left span {
+    background-color: green;
+  }
+  
+  div.right span {
+    background-color: blue;
+  }
+  
+  div {
+    margin: 50px;
+  }
+  
+  div.left {
+    display: flex;
+    justify-content: left;
+  }
+  
+  div.right {
+    display: flex;
+    justify-content: right;
+  }
+  
+  div.text{
+    height: 10%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+  }
+  div.text .input{
+    width: 80%;
+  }

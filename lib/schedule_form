@@ -1,0 +1,122 @@
+import valid from "validator";
+import connection from './DB_connection';
+
+function validate_clinic_schedule_form(days, start, end, weeksToGenerate) {
+    var errors = {};
+    var iserror = false;
+    for (var i = 0; i < days.length; i++) {
+        if (!days[i] || (days[i] < 0 || days[i] > 6)) {
+            errors["days"] = "Invalid chosen days";
+            iserror = true;
+            break;
+        }
+    }
+    if (!start || !valid.isTime(start, { hourFormat: "hour24" })) {
+        errors["start"] = "Invalid start time format";
+        iserror = true;
+    }
+    if (!start || !valid.isTime(end, { hourFormat: "hour24" })) {
+        errors["end"] = "Invalid end time format";
+        iserror = true;
+    }
+    if (start >= end) {
+        errors["start_end"] = "Start time must be before End time.";
+        iserror = true
+    }
+    if (!weeksToGenerate || isNaN(weeksToGenerate)) {
+        errors["weeksToGenerate"] = "Invalid week to generate number";
+        iserror = true;
+    }
+    return { errors: errors, iserror: iserror };
+}
+
+async function validate_doctor_schedule_form(days, start, end, lunchStart, lunchEnd, slotDuration, weeksToGenerate, clinic, doctorID) {
+    var errors = {};
+    var iserror = false;
+    var slotDurations = ['30', '60', '90', '120'];
+    if(days){
+        for (var i = 0; i < days.length; i++) {
+            if (!days[i] || (days[i] < 0 || days[i] > 6)) {
+                errors["days"] = "Invalid chosen days";
+                iserror = true;
+                break;
+            }
+        }
+    }else{
+        errors["days"] = "Invalid chosen days";
+        iserror = true;
+    }
+    if (!start || !valid.isTime(start, { hourFormat: "hour24" })) {
+        errors["start"] = "Invalid start time format";
+        iserror = true;
+    }
+    if (!start || !valid.isTime(end, { hourFormat: "hour24" })) {
+        errors["end"] = "Invalid end time format";
+        iserror = true;
+    }
+    if (start >= end) {
+        errors["start_end"] = "Start time must be before End time.";
+        iserror = true
+    }
+    if ((lunchStart && !lunchEnd) || (!lunchStart && lunchEnd)) {
+        errors["lunch"] = "Please provide both lunch start and end times.";
+        iserror = true;
+    }
+
+    if (lunchStart && lunchEnd) {
+        if (lunchStart >= lunchEnd) {
+            errors["lunch_start_end"] = "Lunch start must be before lunch end.";
+            iserror = true;
+        }
+
+        if (lunchStart <= start || lunchEnd >= end) {
+            errors["lunch_workingHr"] = "Lunch time must be inside working hours.";
+            iserror = true;
+        }
+    }
+    if (!slotDuration || slotDuration == "" || !slotDurations.includes(slotDuration)) {
+        errors["slot"] = "Invalid Slot";
+        iserror = true;
+    }
+    const [result] = await connection.query("Select 1 from clinic_doctor where doctor_id = ? and clinic_id = ?", [clinic, doctorID]);
+    if (result.length === 0) {
+        errors["clinic_doctor"] = "Doctor is not in the specified clinic";
+        iserror = true;
+    }
+
+    if (!weeksToGenerate || isNaN(weeksToGenerate)) {
+        errors["weeksToGenerate"] = "Invalid week to generate number";
+        iserror = true;
+    }
+    return { errors: errors, iserror: iserror };
+}
+
+function getNextDate(dayOfWeek, fromDate) {
+    const date = new Date(fromDate);
+    console.log(date);
+    console.log(date.getDay());
+    const targetDay = dayOfWeek;
+    const currentDay = date.getDay();
+    let daysUntilNext = targetDay - currentDay;
+    console.log(daysUntilNext);
+    if (daysUntilNext < 0) {
+        daysUntilNext += 7;
+    }
+    date.setDate(date.getDate() + daysUntilNext);
+    console.log(date.toLocaleDateString('sv-SE'));
+    return date;
+}
+
+function tConvert(time) {
+    // Check correct time format and split into components
+    time = time.toString().match(/^([01]\d|2[0-3])(:)([0-5]\d)(:[0-5]\d)?$/) || [time];
+
+    if (time.length > 1) { // If time format correct
+        time = time.slice(1); // Remove full string match value
+        time[5] = +time[0] < 12 ? 'AM' : 'PM'; // Set AM/PM
+        time[0] = +time[0] % 12 || 12; // Adjust hours
+    }
+    return time.join(''); // return adjusted time or original string
+}
+
+export { validate_clinic_schedule_form, getNextDate, validate_doctor_schedule_form, tConvert };

@@ -1,0 +1,52 @@
+import connection from "./DB_connection";
+
+async function get_doctors_by_specialty(specialty) {
+  const [result] = await connection.query("Select first_name from doctors inner join specialties on doctors.specialty_id = specialties.specialty_id where specialty_name = ?", [specialty]);
+  let doctors = [];
+  for (const doctor of result) {
+    doctors.push(doctor['first_name']);
+  }
+  return doctors ? "Here are some doctors for the specialty: " + specialty + "; doctors: " + doctors.join(", ") + "." : "No doctors available for the specialty : " + specialty + ".";
+
+}
+
+async function execute_sql(query) {
+  try {
+    console.log(query);
+    if (!query.trim().toLowerCase().startsWith('select')) {
+      return "Only SELECT queries are allowed. Retry Again.";
+    }
+
+    const [rows] = await connection.query(query);
+
+    console.log(rows);
+
+    if (rows.length === 0) {
+      return "No results found. Please inform the user";
+    }
+
+    console.log(JSON.stringify(rows, null, 2));
+
+    return "Query executed successfully.\nResult:\n" + JSON.stringify(rows, null, 2);
+
+  } catch (error) {
+    console.error("SQL Execution Error:", error);
+    return "Failed to load query.Please inform the user and try again";
+  }
+}
+
+function getDate_Time() {
+  return (new Date).toLocaleString();
+}
+
+async function call_tools(func_name, params) {
+  if (func_name == "get_doctors_by_specialty") {
+    return await get_doctors_by_specialty(params.specialty);
+  } else if (func_name == "get_from_db") {
+    return await execute_sql(params.query);
+  } else {
+    return getDate_Time();
+  }
+}
+
+export { call_tools};

@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/admin.css" />
+</head>
+
+<body>
+    <%- include("background.ejs") %>
+    <h1>Welcome Admin</h1>
+    <div class="clinics">
+        <h3>Clinics</h3>
+        <div class="container-fluid">
+            <div class="row row-gap-3">
+                <div class="clinics-options col-lg-3 col-md-6">
+                    <a href="/admin/clinics/add">
+                        <div class="clinic-options-btn">
+                            <p>Add Clinic</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="clinics-options col-lg-3 col-md-6">
+                    <a href="/clinics/add">
+                        <div class="clinic-options-btn">
+                            <p>Edit Clinic-Doctor</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="clinics-options col-lg-3 col-md-6">
+                    <a href="/admin/clinics/schedule">
+                        <div class="clinic-options-btn">
+                            <p>Edit clinics schedule</p>
+                        </div>
+                    </a>
+                </div>
+                <div class="clinics-options col-lg-3 col-md-6">
+                    <a href="/clinics/add">
+                        <div class="clinic-options-btn">
+                            <p>-</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="/js/script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,52 @@
+@import url('https://fonts.googleapis.com/css2?family=Manjari:wght@100;400;700&display=swap');
+
+body {
+
+    font-family: "Manjari", sans-serif;
+    font-weight: 700;
+    font-style: normal;
+}
+
+h1,
+h3 {
+    font-weight: 700;
+}
+
+.profile-dropdown{
+    display: inline-block;
+}
+
+.profile-dropdown ul{
+    inset: 0px 0px auto 0px !important; 
+}
+
+.profile-dropdown-btn {
+
+    padding: 10px;
+
+}
+
+.profile-dropdown-btn:hover {
+
+    padding: 10px;
+
+}
+
+.profile-dropdown-btn span {
+
+    margin-right: 20px;
+    font-weight: 900;
+
+}
+
+.right-side .header {
+    display: flex;
+    justify-content: flex-end;
+    padding: 20px 10px 0 0;
+}
+
+.right-side .header img{
+    display: flex;
+    justify-content: space-between;
+    width:50px;
+}

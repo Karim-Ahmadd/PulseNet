@@ -1,0 +1,126 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Schedule</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/sidebar.css" />
+    <link rel="stylesheet" href="/css/doctor.css">
+    <link rel="stylesheet" href="/css/schedule_form.css">
+</head>
+
+<body>
+
+
+    <%- include("sidebar.ejs") %>
+        <div class="right-side">
+            <div class="header">
+                <div>
+                    <%- include("profile_dropdown.ejs") %>
+                <button class="btn-show" onclick="show()"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"
+                    fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                        d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5" />
+                </svg></button>
+                </div>
+            </div>
+            <div class="right-side-body">
+                <h1>Schedule <a href="/doctor/calendar"><button id="view-calendar"><span>View Calendar →</span></button></a></h1>
+                <% if (locals.errors) { 
+                    for(const key of Object.keys(errors)) { %>
+                        <div class="alert alert-danger" role="alert"> <%= errors[key] %> </div>
+                    <% } }%>
+ 
+            <form action="/doctor/addSchedule" method="post">
+                <div class="days-of-the-week center">
+                    <p>Days of the Week</p>
+                    <div class="checkboxes">
+                        <div>
+                            <input type="checkbox" id="sunday" name="day[]" value="0" <%if (locals.data && data.day.includes('0')) {%> checked <% } %>>
+                            <label for="sunday">Sunday</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="monday" name="day[]" value="1" <%if (locals.data && data.day.includes('1')) {%> checked <% } %>>
+                            <label for="monday">Monday</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="tuesday" name="day[]" value="2" <%if (locals.data && data.day.includes('2')) {%> checked <% } %>>
+                            <label for="tuesday">Tuesday</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="wednesday" name="day[]" value="3" <%if (locals.data && data.day.includes('3')) {%> checked <% } %>>
+                            <label for="wednesday">Wednesday</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="thursday" name="day[]" value="4" <%if (locals.data && data.day.includes('4')) {%> checked <% } %>>
+                            <label for="thrsday">Thursday</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="friday" name="day[]" value="5" <%if (locals.data && data.day.includes('5')) {%> checked <% } %>>
+                            <label for="friday">Friday</label>
+                        </div>
+                        <div>
+                            <input type="checkbox" id="saturday" name="day[]" value="6" <%if (locals.data && data.day.includes('6')) {%> checked <% } %>>
+                            <label for="saturday">Saturday</label>
+                        </div>
+                    </div>
+                </div>
+                <div class="time">
+                    <div>
+                        <label for="open-time">Open Time: </label>
+                        <input type="time" id="open-time" name="open_time" <%if (locals.data) {%> value="<%=data.open_time%>" <% } %>>
+                    </div>
+                    <div>
+                        <label for="close-time">Close Time: </label>
+                        <input type="time" id="close-time" name="close_time" <%if (locals.data) {%> value="<%=data.close_time%>" <% } %>>
+                    </div>
+                </div>
+                <div class="time">
+                    <div>
+                        <label for="lunch-start">Lunch start: </label>
+                        <input type="time" id="lunch-start" name="lunch_start" <%if (locals.data) {%> value="<%=data.lunch_start%>" <% } %>>
+                    </div>
+                    <div>
+                        <label for="lunch-end">Lunch end: </label>
+                        <input type="time" id="lunch-end" name="lunch_end" <%if (locals.data) {%> value="<%=data.lunch_end%>" <% } %>>
+                    </div>
+                </div>
+                <div class="appointments_duration center">
+                    <label for="appointments_duration">Appointments Duration: </label>
+                    <select name="appointments_duration" id="appointments_duration">
+                        <option value="30" <%if (locals.data && data.appointments_duration == 30) {%> selected <% } %>>30 Minutes</option>
+                        <option value="60" <%if (locals.data && data.appointments_duration == 60) {%> selected <% } %>>1 Hour</option>
+                        <option value="90" <%if (locals.data && data.appointments_duration == 90) {%> selected <% } %>>1 Hour 30 Minutes</option>
+                        <option value="120" <%if (locals.data && data.appointments_duration == 120) {%> selected <% } %>>2 Hours</option>
+                    </select>
+                </div>
+                <div class="weeks-to-generate center">
+                    <label for="weeks-to-generate">Weeks to generate: </label>
+                    <select name="weeks_to_generate" id="weeks-to-generate">
+                        <option value="1" <%if (locals.data && data.weeks_to_generate == 1) {%> selected <% } %>>1 Week</option>
+                        <option value="2" <%if (locals.data && data.weeks_to_generate == 2) {%> selected <% } %>>2 Weeks</option>
+                        <option value="3" <%if (locals.data && data.weeks_to_generate == 3) {%> selected <% } %>>3 Weeks</option>
+                        <option value="4" <%if (locals.data && data.weeks_to_generate == 4) {%> selected <% } %>>4 Weeks</option>
+                    </select>
+                </div>
+                <div class="clinic center">
+                    <label for="clinic">Clinic: </label>
+                    <select name="clinic" id="clinic">
+                        <option value="">Choose a Clinic</option>
+                        <% for(var i=0; i< clinics.length; i++){ %>
+                            <option value="<%=clinics[i]["clinic_id"]%>" <%if (locals.data && data.clinic == clinics[i]["clinic_id"]) {%> selected <% } %>><%=clinics[i]["name"]%></option>
+                            <% } %>
+                    </select>
+                </div>
+
+                <div class="submit"><button>Save</button></div>
+            </form>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/script.js"></script>
+</body>
+
+</html>

@@ -1,0 +1,117 @@
+body {
+  height: 100vh;
+}
+
+form {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  height: 100%;
+}
+
+.center {
+  display: flex;
+  justify-content: center;
+}
+
+.days-of-the-week {
+  display: flex;
+  column-gap: 50px;
+  justify-content: center;
+}
+
+.days-of-the-week .checkboxes {
+  flex-grow: 1;
+  display: flex;
+  justify-content: space-evenly;
+}
+
+.time {
+  display: flex;
+  justify-content: space-evenly;
+  /* margin-top: 7%; */
+  row-gap: 10px;
+}
+
+.time div {
+  display: flex;
+  justify-content: center;
+}
+
+.time label {
+  margin-right: 30px;
+}
+
+.time input {
+  position: relative;
+  bottom: 5px;
+}
+
+.weeks-to-generate {
+  /* margin-top: 7%; */
+  display: flex;
+  justify-content: center;
+}
+
+.weeks-to-generate label {
+  margin-right: 30px;
+}
+
+
+@media (max-width: 1250px) {
+  .days-of-the-week .checkboxes {
+    flex-direction: column;
+    flex-grow: 0;
+  }
+
+  .time {
+    flex-direction: column;
+    justify-content: center;
+  }
+}
+
+.appointments_duration {
+  margin-right: 30px;
+}
+
+.clinic label {
+  margin-right: 30px;
+}
+
+
+div.submit {
+  display: flex;
+  justify-content: end;
+  /* margin-top: 7%; */
+}
+
+div.submit button {
+  border-radius: 30px;
+  border: none;
+  width: 150px;
+  padding: 10px;
+  color: #ffffff;
+  background-color: #00bf63;
+}
+div.submit .delete-schedule{
+  background-color: #fa0000;
+  margin-left: 10px;
+}
+
+button#view-calendar {
+  margin-left: 50px;
+  padding: 5px 15px;
+  font-size: 0.5em;
+  cursor: pointer;
+  position: relative;
+  bottom: 7px;
+  border-radius: 30px;
+  background-color: #5271ff;
+  border: none
+}
+
+button#view-calendar span{
+  position: relative;
+  top: 1px;
+  color: #fff;
+}

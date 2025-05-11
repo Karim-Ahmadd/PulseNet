@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Document</title>
+  <link rel="stylesheet" href="/css/chat.css">
+</head>
+
+<body>
+  
+  <div class="chat">
+    <div class="left">
+      <span>Test</span>
+    </div>
+    <div class="right">
+      <span>Test2</span>
+    </div>
+    <div class="left">
+      <span>Test</span>
+    </div>
+    <div class="right">
+      <span>Test2 Lorem ipsum dolor sit amet consectetur adipisicing elit. Consequuntur vel consequatur quam neque dolores delectus, hic assumenda provident labore accusantium autem nostrum reiciendis unde quae iste veniam et! Totam, dolorum.</span>
+    </div>
+    <div class="left">
+      <span>Test</span>
+    </div>
+    <div class="right">
+      <span>Test2</span>
+    </div>
+  </div>
+
+  <div class="text"><input type="text" class="input"> <button class="send_btn" onclick="getResponse()">Send</button></div>
+
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <script>
+    async function getResponse() {
+      const input = document.querySelector(".input");
+      const p = document.querySelector(".chat");
+
+      
+
+      const div_right = document.createElement("div");
+      div_right.classList.add("right");
+      let span_right = document.createElement("span");
+      span_right.textContent = input.value;
+      console.log(span_right);
+      div_right.appendChild(span_right);
+      p.appendChild(div_right);
+
+      const div_left = document.createElement("div");
+      div_left.classList.add("left");
+      let span_left = document.createElement("span");
+      span_left.classList.add("current_span");
+      div_left.appendChild(span_left);
+      p.appendChild(div_left);
+
+      const res = document.querySelector(".current_span");
+
+      const response = await fetch('http://localhost:3000/chat2', {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+
+        body: new URLSearchParams({ message: input.value })
+      });
+      let total = '';
+      const decoder = new TextDecoder();
+      for await (const chunk of response.body) {
+        const decodedValue = decoder.decode(chunk);
+        total += decodedValue;
+        res.innerHTML = marked.parse(total);
+
+      }
+      
+      res.classList.remove("current_span");
+      input.value = "";
+
+    }
+
+  </script>
+</body>
+
+</html>

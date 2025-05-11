@@ -1,0 +1,30 @@
+.sidebar {
+
+    background-color: #85be00;
+}
+
+.sidebar-nav-link {
+    background-color: #418600;
+}
+
+.right-side-body {
+    padding: 2%;
+
+}
+
+.profile-dropdown-btn {
+    background-color: #418600;
+
+
+}
+
+.profile-dropdown-btn:hover,.profile-dropdown-btn.show, .profile-dropdown-btn:first-child:active {
+    background-color: #418600;
+
+
+}
+
+
+.profile-dropdown-btn span {
+    background-color: #418600
+}

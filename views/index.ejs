@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat</title>
+</head>
+<body>
+    <h1>Hello</h1>
+    <div class="response"></div>
+    <input type="text">
+    <button onclick="getResponse()">Test</button>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        async function getResponse(){
+            const input = document.querySelector("input");
+            const p = document.querySelector(".response");
+
+            p.innerHTML = "";
+
+            const response = await fetch('http://localhost:3000/chat2',{
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/x-www-form-urlencoded",
+                      },
+                      
+                    body: new URLSearchParams({ message: input.value})
+            });
+            let total = '';
+            const decoder = new TextDecoder();
+            for await (const chunk of response.body) {
+                const decodedValue = decoder.decode(chunk);
+                total += decodedValue;
+                p.innerHTML = marked.parse(total);
+                
+            }
+            
+        }
+    
+    </script>
+</body>
+</html>

@@ -1,0 +1,70 @@
+import connection from "./DB_connection";
+
+async function save_chat_memory(type, data) {
+  if (type == "user") {
+    try {
+      await connection.query("INSERT INTO `pulse`.`chat_history`(`user_id`,`role`,`content`) VALUES(?,?,?);", [data["user_id"], data["role"], data["content"]]);
+    } catch (e) {
+      console.log(e);
+    }
+  } else if (type == "assistant_tool") {
+    try {
+      await connection.query("INSERT INTO `pulse`.`chat_history`(`user_id`,`role`,`tool_calls`) VALUES(?,?,?);", [data["user_id"], data["role"], data["tool_calls"]]);
+    } catch (e) {
+      console.log(e);
+    }
+  } else if (type == "tool") {
+    try {
+      await connection.query("INSERT INTO `pulse`.`chat_history`(`user_id`,`role`,`tool_call_id`,`function_name`,`content`) VALUES(?,?,?,?,?);", [data["user_id"], data["role"], data["tool_call_id"], data["name"], data["content"]]);
+    } catch (e) {
+      console.log(e);
+    }
+  } else if (type == "assistant") {
+    try {
+      await connection.query("INSERT INTO `pulse`.`chat_history`(`user_id`,`role`,`content`) VALUES(?,?,?);", [data["user_id"], data["role"], data["content"]])
+    } catch (e) {
+      console.log(e);
+    }
+  }
+}
+
+async function load_chat_memory(user_id) {
+  try {
+    const [rows] = await connection.query("Select * from chat_history where user_id = ? order by user_id", [user_id]);
+
+    let input = [];
+    console.log(rows);
+    for(var row of rows) {
+      console.log(row);
+      if (row["role"] == "user") {
+        input.push({
+          role: row["role"],
+          content: row["content"]
+        });
+      } else if (row["role"] == "assistant" && row["tool_calls"]) {
+        input.push({
+          role: row["role"],
+          tool_calls: row["tool_calls"]
+        });
+      } else if (row["role"] == "tool") {
+        input.push({
+          role: row["role"],
+          tool_call_id: row["tool_call_id"],
+          name: row["function_name"],
+          content: row["content"]
+        })
+      } else if (row["role"] == "assistant") {
+        input.push({
+          role: row["role"],
+          content: row["content"]
+        })
+      }
+    }
+    return input;
+  } catch (e) {
+    console.log(e);
+  }
+
+}
+
+export { save_chat_memory, load_chat_memory};
