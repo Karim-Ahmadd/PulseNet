@@ -263,7 +263,7 @@ app.post("/admin/clinics/addSchedule", async function (req, res) {
 
     const [result] = await connection.query("Select * from clinics where clinic_id = ?", [clinicId]);
     if (result.length > 0) {
-      const errors = await validate_clinic_schedule_form(availableDays, startTime, endTime, weeksToGenerate);
+      const errors = await validate_clinic_schedule_form(availableDays, startTime, endTime, weeksToGenerate, clinicId);
       if (!errors.iserror) {
         const today = toZonedTime(new Date(), "Asia/Beirut");
         const messages = [];
@@ -275,7 +275,7 @@ app.post("/admin/clinics/addSchedule", async function (req, res) {
             var canGenerateDate = true;
 
             try{
-                const [booked_appointments] = await connection.query("Select 1 from appointment_slots where is_booked = 1 and doctor_day_id in (Select doctor_day_id from doctor_calendar as d inner join clinic_calendar as c on c.schedule_id = d.clinic_day_id where c.date=? and c.clinic_id = ?)", [date, clinicId]);
+                const [booked_appointments] = await connection.query("Select 1 from appointment_slots where is_booked = 1 and doctor_day_id in (Select doctor_day_id from doctor_calendar as d inner join clinic_calendar as c on c.schedule_id = d.clinic_day_id where c.date=? and c.clinic_id = ?)", [dateStr, clinicId]);
                 if(booked_appointments.length != 0){
                     messages.push("During "+ dateStr+", some appointments are already scheduled")
                     canGenerateDate = false;
@@ -287,7 +287,7 @@ app.post("/admin/clinics/addSchedule", async function (req, res) {
             if(canGenerateDate){
                 // === Add/Update clinic_calendar row ===
                 try {
-                    await connection.query("INSERT INTO `pulse`.`clinic_calendar` (`clinic_id`,`day_of_week`,`is_open`,`opening_time`,`closing_time`,`date`)VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE opening_time = VALUES(opening_time), closing_time = VALUES(closing_time),is_open = 1", [clinicId, dayNumberToName[day], 1, startTime, endTime, dateStr]);
+                    await connection.query("INSERT INTO `pulse`.`clinic_calendar` (`clinic_id`,`day_of_week`,`is_open`,`opening_time`,`closing_time`,`date`)VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE opening_time = VALUES(opening_time), closing_time = VALUES(closing_time),is_open = 1", [clinicId, dayNumberToName[availableDays[i]], 1, startTime, endTime, dateStr]);
                 } catch (e) {
                     console.log(e);
                 }
@@ -505,7 +505,7 @@ app.post("/doctor/addSchedule", async function (req, res) {
           if(canGenerateDate){
           // === Add/Update clinic_calendar row ===
             try {
-              const [result, fields] = await connection.execute("INSERT INTO `pulse`.`doctor_calendar` (`doctor_id`,`clinic_id`,`day_of_week`,`start_time`,`end_time`,`is_available`,`date`, `clinic_date_id`)VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time),is_available = 1, clinic_id = VALUES(clinic_id)", [req.user.user_id, clinicId, dayNumberToName[day], startTime, endTime, 1, dateStr, clinic_date_id]);
+              const [result, fields] = await connection.execute("INSERT INTO `pulse`.`doctor_calendar` (`doctor_id`,`clinic_id`,`day_of_week`,`start_time`,`end_time`,`is_available`,`date`, `clinic_day_id`)VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time),is_available = 1, clinic_id = VALUES(clinic_id)", [req.user.user_id, clinicId, dayNumberToName[availableDays[i]], startTime, endTime, 1, dateStr, clinic_date_id]);
 
               lastInsertId = result.insertId;
               if(!lastInsertId){
