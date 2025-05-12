@@ -16,6 +16,10 @@
         <h1>Clinic Availability <button id="go-back-btn"
                 onclick="window.location.href='/admin/clinics/addSchedule/<%=clinic_id%>'"><span>← Go
                     Back</span></button></h1>
+        
+        <% if (locals.errors) { errors.forEach(e => { %>
+        <div class="alert alert-danger" role="alert"><%= e %></div>
+        <% })} %>
 
         <div id="controls">
             <button id="prevMonth">← Prev</button>

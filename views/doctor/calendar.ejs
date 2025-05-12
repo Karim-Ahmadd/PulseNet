@@ -11,8 +11,12 @@
     <link rel="stylesheet" href="/css/sidebar.css" />
     <link rel="stylesheet" href="/css/doctor.css" />
     <link rel="stylesheet" href="/css/schedule_form.css" />
-    <style> a{ color: black; text-decoration: none;}
-        </style>
+    <style>
+      a {
+        color: black;
+        text-decoration: none;
+      }
+    </style>
   </head>
 
   <body>
@@ -40,9 +44,9 @@
       </div>
       <div class="right-side-body">
         <h1>Calendar</h1>
-        <% if (locals.errors) { for(const key of Object.keys(errors)) { %>
-        <div class="alert alert-danger" role="alert"><%= errors[key] %></div>
-        <% } }%>
+        <% if (locals.errors) { errors.forEach(e => { %>
+        <div class="alert alert-danger" role="alert"><%= e %></div>
+        <% })} %>
 
         <div id="calendar"></div>
       </div>

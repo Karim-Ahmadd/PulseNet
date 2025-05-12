@@ -19,6 +19,7 @@ import path from "path";
 import { validate_clinic_schedule_form, getNextDate, validate_doctor_schedule_form, tConvert } from "./lib/schedule_form";
 import { call_tools } from "./lib/chat_tools";
 import { toZonedTime } from 'date-fns-tz'
+import { buildCalendar } from "./lib/calendar.js";
 
 
 env.config();
@@ -262,28 +263,42 @@ app.post("/admin/clinics/addSchedule", async function (req, res) {
 
     const [result] = await connection.query("Select * from clinics where clinic_id = ?", [clinicId]);
     if (result.length > 0) {
-      const errors = validate_clinic_schedule_form(availableDays, startTime, endTime, weeksToGenerate);
+      const errors = await validate_clinic_schedule_form(availableDays, startTime, endTime, weeksToGenerate);
       if (!errors.iserror) {
         const today = toZonedTime(new Date(), "Asia/Beirut");
-        availableDays.forEach(async day => {
-          let currentDate = getNextDate(day, today);
+        const messages = [];
+        for(var i =0; i<availableDays.length; i++) {
+          let currentDate = getNextDate(availableDays[i], today);
 
           for (let week = 0; week < weeksToGenerate; week++) {
             const dateStr = currentDate.toLocaleDateString("sv-SE", { timeZone: "Asia/Beirut" }); // format as 'YYYY-MM-DD' Beirut time
+            var canGenerateDate = true;
 
-            // === Add/Update clinic_calendar row ===
-            try {
-              await connection.query("INSERT INTO `pulse`.`clinic_calendar` (`clinic_id`,`day_of_week`,`is_open`,`opening_time`,`closing_time`,`date`)VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE opening_time = VALUES(opening_time), closing_time = VALUES(closing_time),is_open = 1", [clinicId, dayNumberToName[day], 1, startTime, endTime, dateStr]);
-            } catch (e) {
-              console.log(e);
+            try{
+                const [booked_appointments] = await connection.query("Select 1 from appointment_slots where is_booked = 1 and doctor_day_id in (Select doctor_day_id from doctor_calendar as d inner join clinic_calendar as c on c.schedule_id = d.clinic_day_id where c.date=? and c.clinic_id = ?)", [date, clinicId]);
+                if(booked_appointments.length != 0){
+                    messages.push("During "+ dateStr+", some appointments are already scheduled")
+                    canGenerateDate = false;
+                }
+            }catch(e){
+                console.log(e);
+            }
+
+            if(canGenerateDate){
+                // === Add/Update clinic_calendar row ===
+                try {
+                    await connection.query("INSERT INTO `pulse`.`clinic_calendar` (`clinic_id`,`day_of_week`,`is_open`,`opening_time`,`closing_time`,`date`)VALUES(?,?,?,?,?,?) ON DUPLICATE KEY UPDATE opening_time = VALUES(opening_time), closing_time = VALUES(closing_time),is_open = 1", [clinicId, dayNumberToName[day], 1, startTime, endTime, dateStr]);
+                } catch (e) {
+                    console.log(e);
+                }
             }
 
             currentDate.setDate(currentDate.getDate() + 7);
           }
-        });
-        res.redirect("/admin/clinics/calendar/" + clinicId);
+        }
+        res.render("admin/clinic_calendar.ejs", { clinic_id: clinicId, errors: messages });
       } else {
-        res.redirect("/admin/clinics/addSchedule/" + clinicId);
+        res.render("admin/clinic_schedule_form.ejs", { clinic_id: clinicId, errors: errors.errors });
       }
 
     } else {
@@ -444,69 +459,104 @@ app.post("/doctor/addSchedule", async function (req, res) {
     };
     var lastInsertId;
     const errors = await validate_doctor_schedule_form(availableDays, startTime, endTime, lunchStart, lunchEnd, appointmentDurationMinutes, weeksToGenerate, clinicId, req.user.user_id);
-    console.log(errors);
     if (!errors.iserror) {
 
       const today = toZonedTime(new Date(), "Asia/Beirut");
-      availableDays.forEach(async day => {
-        let currentDate = getNextDate(day, today);
+      const messages = [];
+      for(var i =0; i< availableDays.length; i++){
+        let currentDate = getNextDate(availableDays[i], today);
 
         for (let week = 0; week < weeksToGenerate; week++) {
           const dateStr = currentDate.toLocaleDateString("sv-SE", { timeZone: "Asia/Beirut" }); // format as 'YYYY-MM-DD' Beirut time
-
-          // === Add/Update clinic_calendar row ===
-          try {
-            const [result, fields] = await connection.execute("INSERT INTO `pulse`.`doctor_calendar` (`doctor_id`,`clinic_id`,`day_of_week`,`start_time`,`end_time`,`is_available`,`date`)VALUES(?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time),is_available = 1, clinic_id = VALUES(clinic_id)", [req.user.user_id, clinicId, dayNumberToName[day], startTime, endTime, 1, dateStr]);
-
-            lastInsertId = result.insertId;
-            if(!lastInsertId){
-              const [result] = await connection.query("Select schedule_id from doctor_calendar where doctor_id =? and date = ?", [req.user.user_id, dateStr]);
-              lastInsertId = result[0]["schedule_id"];
+          console.log(dateStr);
+          console.log(messages);
+          var canGenerateDate = true;
+          var clinic_start;
+          var clinic_end;
+          var clinic_date_id;
+          try{
+            const [clinic_results] = await connection.query("Select schedule_id, opening_time, closing_time from clinic_calendar where clinic_id = ? and date = ?", [clinicId, dateStr]);
+            if(clinic_results.length != 0){
+                clinic_start = clinic_results[0]["opening_time"].substring(0,5);
+                clinic_end = clinic_results[0]["closing_time"].substring(0,5);
+                clinic_date_id = clinic_results[0]["schedule_id"];
             }
-          } catch (e) {
+            console.log(startTime);
+            console.log(clinic_start);
+            console.log(endTime);
+            console.log(clinic_end);
+            
+            if(clinic_results.length == 0){
+                messages.push("The chosen clinic is not open during "+ dateStr);
+                canGenerateDate = false;
+            }else if(startTime < clinic_start || startTime >= clinic_end || endTime <= clinic_start || endTime> clinic_end ){
+                messages.push("In "+ dateStr+ ",the chosen clinic is not open between "+ tConvert(startTime) + " "+ tConvert(endTime));
+                canGenerateDate = false;
+            }
+
+            const [booked_appointments] = await connection.query("Select 1 from appointment_slots as a inner join doctor_calendar as d on a.doctor_day_id = d.schedule_id where is_booked = 1 and d.date =? and d.doctor_id = ?", [dateStr, req.user.user_id]);
+            if(booked_appointments.length != 0){
+                messages.push("Some appointments are booked during "+ dateStr);
+                canGenerateDate= false;
+            }
+          }catch(e){
             console.log(e);
           }
+          if(canGenerateDate){
+          // === Add/Update clinic_calendar row ===
+            try {
+              const [result, fields] = await connection.execute("INSERT INTO `pulse`.`doctor_calendar` (`doctor_id`,`clinic_id`,`day_of_week`,`start_time`,`end_time`,`is_available`,`date`, `clinic_date_id`)VALUES(?,?,?,?,?,?,?,?) ON DUPLICATE KEY UPDATE start_time = VALUES(start_time), end_time = VALUES(end_time),is_available = 1, clinic_id = VALUES(clinic_id)", [req.user.user_id, clinicId, dayNumberToName[day], startTime, endTime, 1, dateStr, clinic_date_id]);
 
-          const startParts = startTime.split(':').map(Number);
-          const endParts = endTime.split(':').map(Number);
-          let slotStart = new Date(currentDate);
-          slotStart.setHours(startParts[0], startParts[1], 0, 0);
-
-          const slotEnd = new Date(currentDate);
-          slotEnd.setHours(endParts[0], endParts[1], 0, 0);
-
-          await connection.execute("Delete from appointment_slots where doctor_day_id = ?", [lastInsertId]);
-          while (slotStart < slotEnd) {
-            const nextSlot = new Date(slotStart.getTime() + appointmentDurationMinutes * 60000);
-
-            const slotStartTime = slotStart.toTimeString().substring(0, 5);
-            const slotEndTime = nextSlot.toTimeString().substring(0, 5);
-
-            if (nextSlot > slotEnd) break;
-
-            if (
-              (slotStartTime >= lunchStart && slotStartTime < lunchEnd) ||
-              (slotEndTime > lunchStart && slotEndTime <= lunchEnd)
-            ) {
-              slotStart = nextSlot;
-              continue;
-            }
-
-            try{
-            await connection.query("INSERT INTO `pulse`.`appointment_slots` (`doctor_id`,`clinic_id`,`slot_date`,`start_time`,`end_time`,`doctor_day_id`)VALUES(?,?,?,?,?,?)", [req.user.user_id, clinicId,dateStr, slotStartTime, slotEndTime, lastInsertId]);
-            }catch(e){
+              lastInsertId = result.insertId;
+              if(!lastInsertId){
+                const [result] = await connection.query("Select schedule_id from doctor_calendar where doctor_id =? and date = ?", [req.user.user_id, dateStr]);
+                lastInsertId = result[0]["schedule_id"];
+              }
+            } catch (e) {
               console.log(e);
             }
 
-            slotStart = nextSlot;
-          }
+            const startParts = startTime.split(':').map(Number);
+            const endParts = endTime.split(':').map(Number);
+            let slotStart = new Date(currentDate);
+            slotStart.setHours(startParts[0], startParts[1], 0, 0);
 
+            const slotEnd = new Date(currentDate);
+            slotEnd.setHours(endParts[0], endParts[1], 0, 0);
+
+            await connection.execute("Delete from appointment_slots where doctor_day_id = ?", [lastInsertId]);
+            while (slotStart < slotEnd) {
+              const nextSlot = new Date(slotStart.getTime() + appointmentDurationMinutes * 60000);
+
+              const slotStartTime = slotStart.toTimeString().substring(0, 5);
+              const slotEndTime = nextSlot.toTimeString().substring(0, 5);
+
+              if (nextSlot > slotEnd) break;
+
+              if (
+                (slotStartTime >= lunchStart && slotStartTime < lunchEnd) ||
+                (slotEndTime > lunchStart && slotEndTime <= lunchEnd)
+              ) {
+                slotStart = nextSlot;
+                continue;
+              }
+
+              try{
+              await connection.query("INSERT INTO `pulse`.`appointment_slots` (`doctor_id`,`clinic_id`,`slot_date`,`start_time`,`end_time`,`doctor_day_id`)VALUES(?,?,?,?,?,?)", [req.user.user_id, clinicId,dateStr, slotStartTime, slotEndTime, lastInsertId]);
+              }catch(e){
+                console.log(e);
+              }
+
+              slotStart = nextSlot;
+            }
+        }
           // Move to next week's same day
           currentDate.setDate(currentDate.getDate() + 7);
         }
-        res.redirect("/doctor/addSchedule");
-      });
-
+        
+      }
+      const cal_events = await buildCalendar(req.user.user_id);
+      res.render("doctor/calendar.ejs", {events: cal_events, errors: messages});
 
     } else {
       const [result] = await connection.query("Select clinics.clinic_id, clinics.name from clinic_doctor inner join clinics on clinics.clinic_id = clinic_doctor.clinic_id where doctor_id = ?", [req.user.user_id]);
@@ -521,29 +571,7 @@ app.post("/doctor/addSchedule", async function (req, res) {
 app.get("/doctor/calendar", async function(req,res){
   if(req.isAuthenticated() && req.user.role_id == 2){
     try{
-    const cal_events = [];
-    const [cal_results] = await connection.query("Select start_time, end_time, DATE_FORMAT(date,'%Y-%m-%d') as date from doctor_calendar where doctor_id = ?", [req.user.user_id]);
-    for(var i =0; i<cal_results.length; i++){
-      const start_time = cal_results[i]["start_time"].substring(0,5);
-      const end_time = cal_results[i]["end_time"].substring(0,5);
-      cal_events.push({
-        title: "Work from "+ tConvert(start_time) + " to "+ tConvert(end_time),
-        start: cal_results[i]["date"]
-      })
-    }
-
-    const [slots_results] = await connection.query("Select DATE_FORMAT(slot_date,'%Y-%m-%d') as slot_date, start_time, end_time from appointment_slots where doctor_id = ? ", [req.user.user_id]);
-    console.log(slots_results);
-    for(var i =0; i<slots_results.length; i++){
-      const start_time = slots_results[i]["start_time"];
-      const end_time = slots_results[i]["end_time"];
-      cal_events.push({
-        title: "Appointment",
-        start: slots_results[i]["slot_date"] + "T"+ start_time,
-        end: slots_results[i]["slot_date"] + "T"+ end_time
-      })
-    }
-    console.log(cal_events);
+    const cal_events = await buildCalendar(req.user.user_id);
     res.render("doctor/calendar.ejs", {events: cal_events});
   }catch(e){
     console.log(e);
