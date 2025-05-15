@@ -40,6 +40,30 @@ async function validate_clinic_schedule_form(days, start, end, weeksToGenerate, 
     return { errors: errors, iserror: iserror };
 }
 
+async function validate_clinic_updateSchedule_form(clinic_id, start, end, schedule_id) {
+    var errors = {};
+    var iserror = false;
+
+    if (!start || !valid.isTime(start, { hourFormat: "hour24" })) {
+        errors["start"] = "Invalid start time format";
+        iserror = true;
+    }
+    if (!start || !valid.isTime(end, { hourFormat: "hour24" })) {
+        errors["end"] = "Invalid end time format";
+        iserror = true;
+    }
+    if (start >= end) {
+        errors["start_end"] = "Start time must be before End time.";
+        iserror = true
+    }
+    const [result] = await connection.query("Select 1 from clinic_calendar where clinic_id = ? and schedule_id = ?", [clinic_id,schedule_id]);
+    if (result.length === 0) {
+        errors["clinic"] = "The clinic's schedule you are updating does not exists";
+        iserror = true;
+    }
+    return { errors: errors, iserror: iserror };
+}
+
 async function validate_doctor_schedule_form(days, start, end, lunchStart, lunchEnd, slotDuration, weeksToGenerate, clinic, doctorID) {
     var errors = {};
     var iserror = false;
@@ -101,6 +125,58 @@ async function validate_doctor_schedule_form(days, start, end, lunchStart, lunch
     return { errors: errors, iserror: iserror };
 }
 
+async function validate_doctor_updateSchedule_form(start, end, lunchStart, lunchEnd, slotDuration, clinic, doctorID, schedule_id) {
+    var errors = {};
+    var iserror = false;
+    var slotDurations = ['30', '60', '90', '120'];
+    
+    console.log(start);
+    if (!start || !valid.isTime(start, { hourFormat: "hour24" })) {
+        errors["start"] = "Invalid start time format";
+        iserror = true;
+    }
+    if (!start || !valid.isTime(end, { hourFormat: "hour24" })) {
+        errors["end"] = "Invalid end time format";
+        iserror = true;
+    }
+    if (start >= end) {
+        errors["start_end"] = "Start time must be before End time.";
+        iserror = true
+    }
+    if ((lunchStart && !lunchEnd) || (!lunchStart && lunchEnd)) {
+        errors["lunch"] = "Please provide both lunch start and end times.";
+        iserror = true;
+    }
+
+    if (lunchStart && lunchEnd) {
+        if (lunchStart >= lunchEnd) {
+            errors["lunch_start_end"] = "Lunch start must be before lunch end.";
+            iserror = true;
+        }
+
+        if (lunchStart <= start || lunchEnd >= end) {
+            errors["lunch_workingHr"] = "Lunch time must be inside working hours.";
+            iserror = true;
+        }
+    }
+    if (!slotDuration || slotDuration == "" || !slotDurations.includes(slotDuration)) {
+        errors["slot"] = "Invalid Slot";
+        iserror = true;
+    }
+    const [calendar] = await connection.query("Select start_time, end_time, clinic_id from doctor_calendar where schedule_id = ? and doctor_id = ?", [schedule_id, doctorID]);
+    if (calendar.length === 0) {
+        errors["clinic_doctor"] = "The chosen doctor calendar is not available";
+        iserror = true;
+    }
+    const [result] = await connection.query("Select 1 from clinic_doctor where doctor_id = ? and clinic_id = ?", [clinic, doctorID]);
+    if (result.length === 0) {
+        errors["clinic_doctor"] = "Doctor is not in the specified clinic";
+        iserror = true;
+    }
+
+    return { errors: errors, iserror: iserror };
+}
+
 function getNextDate(dayOfWeek, fromDate) {
     const date = new Date(fromDate);
     const targetDay = dayOfWeek;
@@ -125,4 +201,4 @@ function tConvert(time) {
     return time.join(''); // return adjusted time or original string
 }
 
-export { validate_clinic_schedule_form, getNextDate, validate_doctor_schedule_form, tConvert };
+export { validate_clinic_schedule_form, getNextDate, validate_doctor_schedule_form, tConvert, validate_clinic_updateSchedule_form, validate_doctor_updateSchedule_form };

@@ -1,0 +1,89 @@
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Schedule</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="/css/sidebar.css" />
+    <link rel="stylesheet" href="/css/doctor.css">
+    <link rel="stylesheet" href="/css/schedule_form.css">
+</head>
+
+<body>
+
+
+    <%- include("sidebar.ejs") %>
+        <div class="right-side">
+            <div class="header">
+                <div>
+                    <%- include("profile_dropdown.ejs") %>
+                <button class="btn-show" onclick="show()"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"
+                    fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd"
+                        d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5" />
+                </svg></button>
+                </div>
+            </div>
+            <div class="right-side-body">
+                <h1>Schedule <a href="/doctor/calendar"><button id="view-calendar"><span>View Calendar →</span></button></a></h1>
+                <% if (locals.errors) { 
+                    for(const key of Object.keys(errors)) { %>
+                        <div class="alert alert-danger" role="alert"> <%= errors[key] %> </div>
+                    <% } }%>
+ 
+            <form action="/doctor/updateSchedule" method="post">
+                <input type="hidden" name="schedule_id" value="<%= schedule_id%>">
+                <div class="time">
+                    <div>
+                        <label for="open-time">Open Time: </label>
+                        <input type="time" id="open-time" name="open_time" <%if (locals.data) {%> value="<%=data.open_time%>" <% }else { %> value="<%=open_time%>" <%}%>>
+                    </div>
+                    <div>
+                        <label for="close-time">Close Time: </label>
+                        <input type="time" id="close-time" name="close_time" <%if (locals.data) {%> value="<%=data.close_time%>" <% }else { %> value="<%=close_time%>" <%}%>>
+                    </div>
+                </div>
+                <div class="time">
+                    <div>
+                        <label for="lunch-start">Lunch start: </label>
+                        <input type="time" id="lunch-start" name="lunch_start" <%if (locals.data) {%> value="<%=data.lunch_start%>" <% } %>>
+                    </div>
+                    <div>
+                        <label for="lunch-end">Lunch end: </label>
+                        <input type="time" id="lunch-end" name="lunch_end" <%if (locals.data) {%> value="<%=data.lunch_end%>" <% } %>>
+                    </div>
+                </div>
+                <div class="appointments_duration center">
+                    <label for="appointments_duration">Appointments Duration: </label>
+                    <select name="appointments_duration" id="appointments_duration">
+                        <option value="30" <%if (locals.data && data.appointments_duration == 30) {%> selected <% } %>>30 Minutes</option>
+                        <option value="60" <%if (locals.data && data.appointments_duration == 60) {%> selected <% } %>>1 Hour</option>
+                        <option value="90" <%if (locals.data && data.appointments_duration == 90) {%> selected <% } %>>1 Hour 30 Minutes</option>
+                        <option value="120" <%if (locals.data && data.appointments_duration == 120) {%> selected <% } %>>2 Hours</option>
+                    </select>
+                </div>
+                
+                <div class="clinic center">
+                    <label for="clinic">Clinic: </label>
+                    <select name="clinic" id="clinic">
+                        <option value="">Choose a Clinic</option>
+                        <% for(var i=0; i< clinics.length; i++){ %>
+                            <option value="<%=clinics[i]["clinic_id"]%>" <%if (locals.data && data.clinic == clinics[i]["clinic_id"]) {%> selected <% }else if(locals.clinic_id && clinic_id == clinics[i]["clinic_id"]){ %>selected <% } %>><%=clinics[i]["name"]%></option>
+                            <% } %>
+                    </select>
+                </div>
+
+                <div class="submit"><button>Save</button><button class="delete-schedule" form="delete-form">Delete</button></div>
+            </form>
+            <form action="/doctor/deleteSchedule" method="post" id="delete-form">
+                <input type="hidden" name="schedule_id" value="<%= schedule_id%>">
+            </form>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/script.js"></script>
+</body>
+
+</html>

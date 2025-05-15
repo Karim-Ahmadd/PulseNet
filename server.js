@@ -16,10 +16,11 @@ import { save_chat_memory, load_chat_memory } from "./lib/chatbot_memory";
 import fs from "fs";
 import { v4 as uuidv4 } from 'uuid';
 import path from "path";
-import { validate_clinic_schedule_form, getNextDate, validate_doctor_schedule_form, tConvert } from "./lib/schedule_form";
+import { validate_clinic_schedule_form, getNextDate, validate_doctor_schedule_form, tConvert, validate_clinic_updateSchedule_form, validate_doctor_updateSchedule_form } from "./lib/schedule_form";
 import { call_tools } from "./lib/chat_tools";
 import { toZonedTime } from 'date-fns-tz'
 import { buildCalendar } from "./lib/calendar.js";
+import { error } from "console";
 
 
 env.config();
@@ -377,12 +378,30 @@ app.post("/admin/clinics/updateSchedule", async function (req, res) {
   if (req.isAuthenticated() && req.user.role_id == 1) {
 
     const { clinic_id, schedule_id, open_time, close_time } = req.body;
-    const [result] = await connection.query("Select 1 from clinic_calendar where schedule_id = ?", [schedule_id]);
-    if (result.length === 0) {
-      res.redirect("/admin/clinics/schedule");
-    } else if (result.length === 1) {
-      await connection.query("update clinic_calendar set opening_time = ?, closing_time = ? where schedule_id = ?", [open_time, close_time, schedule_id]);
-      res.redirect(`/admin/clinics/calendar/${clinic_id}`);
+    const errors = await validate_clinic_updateSchedule_form(clinic_id, open_time, close_time, schedule_id);
+    if(!errors.iserror){
+      const [result] = await connection.query("Select 1 from clinic_calendar where schedule_id = ? and clinic_id =?", [schedule_id, clinic_id]);
+      if (result.length === 0) {
+        res.redirect("/admin/clinics/schedule");
+      } else if (result.length === 1) {
+        const messages = [];
+        var canUpdateDate = true;
+        try{
+          const [booked_appointments] = await connection.query("Select 1 from appointment_slots as a inner join doctor_calendar as d on a.doctor_day_id = d.schedule_id where is_booked =1 and clinic_day_id = ?", [schedule_id]);
+          if(booked_appointments.length != 0){
+            messages.push("Some appointments are already booked at the selected date. Cannot update!");
+            canUpdateDate = false;
+          }
+        }catch(e){
+          console.log(e);
+        }
+        if(canUpdateDate){
+          await connection.query("update clinic_calendar set opening_time = ?, closing_time = ? where schedule_id = ?", [open_time, close_time, schedule_id]);
+        }
+        res.render("admin/clinic_calendar.ejs", { clinic_id: clinic_id, errors: messages });
+      }
+    }else{
+      res.render("admin/clinic_schedule_form.ejs", { start: open_time, end: close_time, schedule_id: schedule_id, clinic_id: clinic_id, errors: errors.errors });
     }
 
   } else {
@@ -398,12 +417,26 @@ app.post("/admin/clinics/deleteSchedule", async function (req, res) {
   if (req.isAuthenticated() && req.user.role_id == 1) {
 
     const { clinic_id, schedule_id } = req.body;
-    const [result] = await connection.query("Select 1 from clinic_calendar where schedule_id = ?", [schedule_id]);
+    const [result] = await connection.query("Select 1 from clinic_calendar where schedule_id = ? and clinic_id =?", [schedule_id, clinic_id]);
     if (result.length === 0) {
       res.redirect("/admin/clinics/schedule");
     } else if (result.length === 1) {
-      await connection.query("update clinic_calendar set is_open = 0 where schedule_id = ?", [schedule_id]);
-      res.redirect(`/admin/clinics/calendar/${clinic_id}`);
+      const messages = [];
+      var canDeleteDate = false;
+
+      try{
+          const [booked_appointments] = await connection.query("Select 1 from appointment_slots as a inner join doctor_calendar as d on a.doctor_day_id = d.schedule_id where is_booked =1 and clinic_day_id = ?", [schedule_id]);
+          if(booked_appointments.length != 0){
+            messages.push("Some appointments are already booked at the selected date. Cannot delete!");
+            canDeleteDate = false;
+          }
+      }catch(e){
+        console.log(e);
+      }
+      if(canDeleteDate){
+        await connection.query("update clinic_calendar set is_open = 0 where schedule_id = ?", [schedule_id]);
+      }
+      res.render("admin/clinic_calendar.ejs", { clinic_id: clinic_id, errors: messages });
     }
 
   } else {
@@ -564,6 +597,127 @@ app.post("/doctor/addSchedule", async function (req, res) {
     }
 
   } else {
+    res.redirect("/login");
+  }
+});
+
+app.get("/doctor/updateSchedule",async function(req,res){
+  if(req.isAuthenticated && req.user.role_id == 2){
+    const [results] = await connection.query("Select start_time, end_time, clinic_id from doctor_calendar where schedule_id = ? and doctor_id = ?", [req.query.scheduleId, req.user.user_id]);
+    if(results.length != 0){
+      const [clinics] = await connection.query("Select clinics.clinic_id, clinics.name from clinic_doctor inner join clinics on clinics.clinic_id = clinic_doctor.clinic_id where doctor_id = ?", [req.user.user_id]);
+
+      res.render("doctor/updateSchedule.ejs", {open_time: results[0]["start_time"].substring(0,5), close_time: results[0]["end_time"].substring(0,5), clinic_id: results[0]["clinic_id"], clinics: clinics, schedule_id: req.query.scheduleId});
+    }else{
+      res.redirect("/doctor/calendar");
+    }
+
+  }else{
+    res.redirect("/login");
+  }
+});
+
+app.post("/doctor/updateSchedule",async function(req,res){
+  if(req.isAuthenticated && req.user.role_id == 2){
+    const clinicId = req.body.clinic;
+    const startTime = req.body.open_time;
+    const endTime = req.body.close_time;
+    const lunchStart = req.body.lunch_start;
+    const lunchEnd = req.body.lunch_end;
+    const appointmentDurationMinutes = req.body.appointments_duration;
+    const schedule = req.body.schedule_id;
+
+    const errors = await validate_doctor_updateSchedule_form(startTime, endTime, lunchStart, lunchEnd, appointmentDurationMinutes, clinicId, req.user.user_id, schedule);
+    if(!errors.iserror){
+      const messages = [];
+      var canUpdate = true;
+      var clinic_start;
+      var clinic_end;
+      var clinic_date;
+      // const [clinic_results]= await connection.query("Select c.opening_time, c.closing_time, DATE_FORMAT(c.date,'%Y-%m-%d') as date from clinic_calendar as c inner join doctor_calendar as d on d.clinic_day_id = c.schedule_id where d.schedule_id = ?", [schedule]);
+      const [clinic_results]= await connection.query("Select c.opening_time, c.closing_time, DATE_FORMAT(c.date,'%Y-%m-%d') as date from clinic_calendar as c where c.clinic_id = ? and c.date in (Select date from doctor_calendar where schedule_id = ?)", [clinicId, schedule]);
+      if(clinic_results.length != 0){
+        clinic_start = clinic_results[0]["opening_time"].substring(0,5);
+        clinic_end = clinic_results[0]["closing_time"].substring(0,5);
+        clinic_date = clinic_results[0]["date"];
+      }
+
+      if(clinic_results.length == 0){
+        messages.push("Clinic not open in the selected date");
+        canUpdate = false;
+      }else if(startTime < clinic_start || startTime >= clinic_end || endTime <= clinic_start || endTime> clinic_end ){
+        messages.push("Clinic is not open from "+ tConvert(startTime)+ " to "+ tConvert(endTime)+ " during "+ clinic_date);
+        canUpdate = false;
+      }
+      const [booked_appointments] = await connection.query("Select 1 from appointment_slots as a inner join doctor_calendar as d on a.doctor_day_id = d.schedule_id where is_booked = 1 and d.schedule_id = ?", [schedule]);
+      if(booked_appointments.length != 0){
+          messages.push("Some appointments are booked during "+ dateStr);
+          canUpdate= false;
+      }
+      if(canUpdate){
+        await connection.query("update doctor_calendar set clinic_id = ?, start_time = ?, end_time = ? where schedule_id = ?", [clinicId, startTime, endTime, schedule]);
+        await connection.query("Delete from appointment_slots where doctor_day_id = ?", [schedule]);
+        const [doctor_date] = await connection.query("Select DATE_FORMAT(date, '%Y-%m-%d') as date from doctor_calendar where schedule_id = ?", [schedule]);
+
+        const startParts = startTime.split(':').map(Number);
+        const endParts = endTime.split(':').map(Number);
+        let slotStart = new Date();
+        slotStart.setHours(startParts[0], startParts[1], 0, 0);
+        const slotEnd = new Date();
+        slotEnd.setHours(endParts[0], endParts[1], 0, 0);
+        while (slotStart < slotEnd) {
+          const nextSlot = new Date(slotStart.getTime() + appointmentDurationMinutes * 60000);
+          const slotStartTime = slotStart.toTimeString().substring(0, 5);
+          const slotEndTime = nextSlot.toTimeString().substring(0, 5);
+          if (nextSlot > slotEnd) break;
+          if (
+            (slotStartTime >= lunchStart && slotStartTime < lunchEnd) ||
+            (slotEndTime > lunchStart && slotEndTime <= lunchEnd)
+          ) {
+            slotStart = nextSlot;
+            continue;
+          }
+          try{
+          await connection.query("INSERT INTO `pulse`.`appointment_slots` (`doctor_id`,`clinic_id`,`slot_date`,`start_time`,`end_time`,`doctor_day_id`)VALUES(?,?,?,?,?,?)", [req.user.user_id, clinicId,doctor_date[0]["date"], slotStartTime, slotEndTime, schedule]);
+          }catch(e){
+            console.log(e);
+          }
+          slotStart = nextSlot;
+        }
+      }
+      const cal_events = await buildCalendar(req.user.user_id);
+      res.render("doctor/calendar.ejs", {events: cal_events, errors: messages});
+
+    }else{
+      const [result] = await connection.query("Select clinics.clinic_id, clinics.name from clinic_doctor inner join clinics on clinics.clinic_id = clinic_doctor.clinic_id where doctor_id = ?", [req.user.user_id]);
+      res.render("doctor/updateSchedule.ejs", {data: req.body, clinics: result, schedule_id: schedule, errors: errors.errors});
+    }
+
+  }else{
+    res.redirect("/login");
+  }
+});
+
+app.post("/doctor/deleteSchedule", async function(req,res){
+  if(req.isAuthenticated() && req.user.role_id == 2){
+    const [results] = await connection.query("Select 1 from doctor_calendar where schedule_id = ? and doctor_id = ?", [req.body.schedule_id, req.user.user_id]);
+    if(results.length != 0){
+      const messages = [];
+      const [booked_appointments] = await connection.query("Select DATE_FORMAT(slot_date, '%Y-%m-%d') as date from appointment_slots where doctor_day_id = ? and is_booked = 1", [req.body.schedule_id]);
+      if(booked_appointments.length != 0){
+        messages.push("Booked appointments exists for selected date: "+ booked_appointments[0]["date"]);
+      }else{
+        await connection.query("Delete from doctor_calendar where schedule_id = ?", [req.body.schedule_id]);
+      }
+
+      const cal_events = await buildCalendar(req.user.user_id);
+      res.render("doctor/calendar.ejs", {events: cal_events, errors: messages});
+    }else{
+      res.redirect("/doctor/calendar");
+    }
+
+
+  }else{
     res.redirect("/login");
   }
 });
