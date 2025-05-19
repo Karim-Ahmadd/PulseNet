@@ -28,3 +28,14 @@
 .profile-dropdown-btn span {
     background-color: #418600
 }
+
+/* Home Page */
+
+div.data-box{
+  background: #418600;
+background: linear-gradient(107deg, rgba(65, 134, 0, 1) 14%, rgba(87, 199, 133, 1) 95%);
+}
+
+.a_table tbody tr:nth-child(odd){
+  background-color: #85ce00
+}

@@ -10,8 +10,10 @@ body {
 h1,
 h3 {
     font-weight: 700;
+    margin: 30px 0;
 }
 
+/* Dropdown button */
 .profile-dropdown{
     display: inline-block;
 }
@@ -49,4 +51,95 @@ h3 {
     display: flex;
     justify-content: space-between;
     width:50px;
+}
+
+/* Home Page Data */
+
+.data-title{
+  font-size: 1.8rem;
+}
+.data-box .data{
+    font-size: 1.5rem
+}
+div.data-box{
+ 
+  color: white;
+  padding: 10px;
+  box-shadow: 0 0 150px rgba(0,0,0,.25);
+}
+div.data-box div.data-title{
+  margin-bottom: 20%
+}
+div.data-box div.data{
+  text-align: right;
+}
+
+/* Table */
+.table-div{
+  margin: 20px;
+}
+.a_table{
+  border-collapse: collapse;
+  
+  width: 100%;
+  box-shadow: 0 0 5px rgba(0,0,0,.25);
+  box-shadow: 0 0 5px rgba(0,0,0,.25);
+}
+.a_table tr{
+  padding : .45em;
+}
+
+.a_table th, .a_table td{
+  font-size: 1em;
+  padding: 1em;
+  text-align: center;
+}
+.status_btn{
+    cursor: default !important;
+}
+
+@media (max-width: 440px){
+  .a_table thead tr{
+    display: none
+  }
+  .a_table tr{
+    display: block
+  }
+  .a_table th, .a_table td {
+    padding: .5em
+  }
+  .a_table td{
+    text-align: right;
+    display: block;
+    font-size: 1em;
+  }
+  .a_table td::before{
+    content: attr(data-title) ": ";
+    float: left;
+    font-style: bold;
+  }
+}
+
+/* search */
+
+ .search-container input[type=text]{
+  padding: 6px;
+  margin-top: 8px;
+  font-size: 17px;
+  border-color: #5271ff;
+}
+
+ .search-container button {
+
+  padding: 6px 10px;
+  margin-top: 8px;
+  margin-right: 16px;
+  background: #ddd;
+  font-size: 17px;
+  border: none;
+  cursor: pointer;
+}
+
+ .search-container button:hover {
+  background: #ccc;
 }

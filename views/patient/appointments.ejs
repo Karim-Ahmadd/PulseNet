@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Patient</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css"
+    />
+    <link rel="stylesheet" href="/css/style.css" />
+    <link rel="stylesheet" href="/css/sidebar.css" />
+    <link rel="stylesheet" href="/css/patient.css" />
+    <link
+      rel="stylesheet"
+      href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/4.7.0/css/font-awesome.min.css"
+    />
+  </head>
+
+  <body>
+    <%- include("sidebar.ejs") %>
+    <div class="right-side">
+      <%- include("right_side_header.ejs") %>
+
+      <div class="right-side-body">
+        <h1>Available Appointments</h1>
+        <div class="search-container">
+          <form id="search-form">
+            <input type="text" placeholder="Search.." name="search" />
+            <button type="submit"><i class="fa fa-search"></i></button>
+          </form>
+        </div>
+        <div class="table-div">
+          <table class="a_table">
+            <thead>
+              <tr>
+                <th>First Name</th>
+                <th>Last Name</th>
+                <th>Specialty</th>
+                <th>Date</th>
+                <th>Time</th>
+                <th>Location</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.7.1/jquery.min.js"></script>
+    <script src="/js/script.js"></script>
+    <script>
+      $("#search-form").on("submit", function (e) {
+        e.preventDefault();
+
+        var input = $(".search-container input[type=text]").val().toLowerCase();
+        console.log(input.length);
+        if (input.length != 0) {
+          $.ajax({
+            type: "GET",
+            url: "/patient/listAppointments?input=" + input,
+            xhrFields: {
+              withCredentials: true,
+            },
+            success: function (response) {
+                $(".a_table tbody").empty();
+                for(var i =0; i<response.length; i++) {
+                    $(".a_table tbody").append(`<tr>
+                                        <td data-title="First Name">${response[i]["first_name"]}</td>
+                                        <td data-title="Last Name">${response[i]["last_name"]}</td>
+                                        <td data-title="Specialty">${response[i]["specialty_name"]}</td>
+                                        <td data-title="Date">${response[i]["date"]}</td>
+                                        <td data-title="Time">${response[i]["time"]}</td>
+                                        <td data-title="Location">${response[i]["address"]}</td>
+                                        <td data-title="Status"><button type="button" class="btn btn-dark status_btn">Unbooked</button></td>
+                                        <td data-title="Action"><button type="button" class="btn btn-success"
+                                            data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                                            Book
+                                        </button></td>
+                                    </tr>`);
+                }
+            },
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

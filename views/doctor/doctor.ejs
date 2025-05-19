@@ -6,23 +6,111 @@
     <title>Doctor</title>
     <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="/css/style.css">
-    <link rel="stylesheet" href="/css/sidebar.css"/>
+    <link rel="stylesheet" href="/css/sidebar.css" />
     <link rel="stylesheet" href="/css/doctor.css">
 </head>
 
 <body>
 
     <%- include("sidebar.ejs") %>
-    <div class="right-side">
-        <button class="btn-show" onclick="show()"><svg xmlns="http://www.w3.org/2000/svg" width="32" height="32"
-                fill="currentColor" class="bi bi-list" viewBox="0 0 16 16">
-                <path fill-rule="evenodd"
-                    d="M2.5 12a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5m0-4a.5.5 0 0 1 .5-.5h10a.5.5 0 0 1 0 1H3a.5.5 0 0 1-.5-.5" />
-            </svg></button>
-        <p>Test</p>
-    </div>
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="/js/script.js"></script>
+        <div class="right-side">
+            <%- include("right_side_header.ejs") %>
+                <div class="right-side-body">
+                    <h1>Hello Dr. <%= doctor_name %> 👋</h1>
+                    <div class="container-fluid">
+                        <div class="row row-gap-3">
+                            <div class="col-md-4 col-sm-12">
+                                <div class="data-box">
+                                    <div class="data-title">
+                                        Upcoming Appointments
+                                    </div>
+                                    <div class="data"><span><%= booked.length %></span></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                <div class="data-box">
+                                    <div class="data-title">
+                                        Completed Appointments
+                                    </div>
+                                    <div class="data"><span><%= completed %> </span></div>
+                                </div>
+                            </div>
+                            <div class="col-md-4 col-sm-12">
+                                <div class="data-box">
+                                    <div class="data-title">
+                                        Number of Patients
+                                    </div>
+                                    <div class="data"><span><%= patients_num %></span></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <h1>Upcoming Appointments</h1>
+                    <div class="table-div">
+                        
+                        <table class="a_table">
+                            <thead>
+                                <tr>
+                                    <th>First Name</th>
+                                    <th>Last Name</th>
+                                    <th>Date</th>
+                                    <th>Time</th>
+                                    <th>Location</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+
+                            </thead>
+                            <tbody>
+                                <% for(var i=0; i< booked.length; i++) { %>
+                                    <tr>
+                                        <td data-title="First Name"><%= booked[i]["first_name"] %></td>
+                                        <td data-title="Last Name"><%= booked[i]["last_name"] %></td>
+                                        <td data-title="Date"><%= booked[i]["date"] %></td>
+                                        <td date-title="Time"><%= booked[i]["time"] %></td>
+                                        <td data-title="Location"><%= booked[i]["address"] %></td>
+                                        <td data-title="Status"><button type="button"
+                                                class="btn btn-warning status_btn">Booked</button></td>
+                                        <td data-title="Action"><button type="button" class="btn btn-danger"
+                                            data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                                            Cancel
+                                        </button></td>
+                                    </tr>
+                                    <% } %>
+                                <tr>
+                                    <td data-title="First Name">Mafalda</td>
+                                    <td data-title="Last Name">Matias</td>
+                                    <td data-title="Date">13-Aug-2023</td>
+                                    <td date-title="Time">10:00 am</td>
+                                    <td data-title="Location">Clinic Monique Rivera</td>
+                                    <td data-title="Status"><button type="button"
+                                            class="btn btn-warning status_btn">Booked</button></td>
+                                    <td data-title="Action"><button type="button" class="btn btn-danger"
+                                            data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                                            Cancel
+                                        </button></td>
+                                </tr>
+                                <tr>
+                                    <td data-title="First Name">Mafalda</td>
+                                    <td data-title="Last Name">Matias</td>
+                                    <td data-title="Date & Time">13-Aug-2023</td>
+                                    <td date-title="Time">10:00 am</td>
+                                    <td data-title="Location">Clinic Monique Rivera</td>
+                                    <td data-title="Status"><button type="button"
+                                            class="btn btn-warning status_btn">Booked</button></td>
+                                    <td data-title="Action"><button type="button" class="btn btn-danger"
+                                            data-bs-toggle="modal" data-bs-target="#staticBackdrop">
+                                            Cancel
+                                        </button></td>
+                                </tr>
+                            </tbody>
+                        </table>
+
+                    </div>
+                </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.5/dist/js/bootstrap.bundle.min.js"></script>
+        <script src="/js/script.js"></script>
 </body>
 
 </html>

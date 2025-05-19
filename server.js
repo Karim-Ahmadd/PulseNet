@@ -94,7 +94,7 @@ app.get("/user", function (req, res) {
   if (req.isAuthenticated() && req.user.role_id == 2) {
     res.redirect("/doctor");
   } else if (req.isAuthenticated() && req.user.role_id == 3) {
-    res.render("patient/patient.ejs");
+    res.redirect("/patient");
   } else if (req.isAuthenticated() && req.user.role_id == 1) {
     res.redirect("/admin");
   } else {
@@ -448,9 +448,17 @@ app.post("/admin/clinics/deleteSchedule", async function (req, res) {
 });
 
 //Doctor
-app.get("/doctor", function (req, res) {
+app.get("/doctor", async function (req, res) {
   if (req.isAuthenticated() && req.user.role_id == 2) {
-    res.render("doctor/doctor.ejs");
+
+    const [booked_appointments] = await connection.query("Select appointment_id, p.first_name, p.last_name, DATE_FORMAT(slot_date,'%Y-%m-%d') as date, TIME_FORMAT(start_time, '%h %i %p') as time, c.address, status from appointments as a inner join appointment_slots as s on a.slot_id = s.slot_id inner join patients as p on p.user_id = a.patient_id inner join clinics as c on c.clinic_id = s.clinic_id where status = 'Scheduled' and s.doctor_id = ? and s.is_booked = 1", [req.user.user_id]);
+
+    const [completed_appointments] = await connection.query("Select count(*) as count from appointments as a inner join appointment_slots as s on a.slot_id = s.slot_id  where status = 'Completed' and s.doctor_id = ? and s.is_booked = 1", [req.user.user_id]);
+
+    const [num_patients] = await connection.query("Select count(Distinct(patient_id)) as count from appointments as a inner join appointment_slots as s on a.slot_id = s.slot_id  where status != 'Cancelled' and s.doctor_id = ? and s.is_booked = 1", [req.user.user_id]);
+
+    const [doctor_name] = await connection.query("Select CONCAT(first_name, ' ', last_name) as name from doctors where user_id =?", [req.user.user_id]);
+    res.render("doctor/doctor.ejs", {booked: booked_appointments, completed: completed_appointments[0]["count"], patients_num : num_patients[0]["count"], doctor_name: doctor_name[0]["name"]});
   } else {
     res.redirect("/login");
   }
@@ -735,6 +743,51 @@ app.get("/doctor/calendar", async function(req,res){
   }else{
     res.redirect("/login");
   }
+});
+
+//Patient
+
+app.get("/patient", async function(req,res){
+  if(req.isAuthenticated() && req.user.role_id == 3){
+    const [booked_appointments] = await connection.query("Select appointment_id, d.first_name, d.last_name, sp.specialty_name, DATE_FORMAT(slot_date,'%Y-%m-%d') as date, TIME_FORMAT(start_time, '%h %i %p') as time, c.address, status from appointments as a inner join appointment_slots as s on a.slot_id = s.slot_id inner join doctors as d on d.user_id = s.doctor_id inner join clinics as c on c.clinic_id = s.clinic_id inner join specialties as sp on sp.specialty_id = d.specialty_id where status = 'Scheduled' and a.patient_id = ? and s.is_booked = 1", [req.user.user_id]);
+
+    const [completed_appointments] = await connection.query("Select count(*) as count from appointments as a inner join appointment_slots as s on a.slot_id = s.slot_id  where status = 'Completed' and a.patient_id = ? and s.is_booked = 1", [req.user.user_id]);
+    const [num_doctors] = await connection.query("Select count(Distinct(doctor_id)) as count from appointments as a inner join appointment_slots as s on a.slot_id = s.slot_id  where status != 'Cancelled' and a.patient_id = ? and s.is_booked = 1", [req.user.user_id]);
+    const [patient_name] = await connection.query("Select CONCAT(first_name, ' ', last_name) as name from patients where user_id =?", [req.user.user_id]);
+    
+
+  res.render("patient/patient.ejs", {booked: booked_appointments, completed: completed_appointments[0]["count"], doctors_num : num_doctors[0]["count"], patient_name: patient_name[0]["name"]});
+  }else{
+    res.redirect("/login");
+  }
+});
+
+app.get("/patient/appointments", async function(req,res){
+  if(req.isAuthenticated() && req.user.role_id == 3){
+    
+    res.render("patient/appointments.ejs");
+  }else{
+    res.redirect("/login");
+  }
+});
+
+app.get("/patient/listAppointments", async function(req,res){
+  // if(req.isAuthenticated() && req.user.role_id == 3){
+    const input = req.query?.input?.toLowerCase();
+
+    const today = toZonedTime(new Date(), "Asia/Beirut");
+    const time = today.toTimeString().split(" ")[0];
+    const date = today.toLocaleDateString("sv-SE", { timeZone: "Asia/Beirut" });
+
+    const [result] = await connection.query("Select sl.slot_id, d.first_name, d.last_name, sp.specialty_name, DATE_FORMAT(sl.slot_date,'%Y-%m-%d') as date, TIME_FORMAT(sl.start_time, '%h %i %p') as time, c.address from appointment_slots as sl inner join doctors as d on d.user_id = sl.doctor_id inner join clinics as c on c.clinic_id = sl.clinic_id inner join specialties as sp on d.specialty_id = sp.specialty_id where (LOWER(d.first_name) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(d.last_name) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(CONCAT(d.first_name, ' ', d.last_name)) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', ?, '%'))) AND is_booked = 0 AND sl.slot_date >= ? AND sl.start_time >= ?", [input, input, input, input, date, time]);
+
+    console.log(result);
+
+    res.json(result);
+  // }else{
+  //   console.log("HERE")
+  //   res.redirect("/login");
+  // }
 });
 
 //ChatBot

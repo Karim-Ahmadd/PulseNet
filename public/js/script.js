@@ -12,4 +12,4 @@ function close_bar(){
     const side_bar = document.querySelector(".sidebar");
     
     side_bar.classList.remove("show-bar");
-  }
+}
