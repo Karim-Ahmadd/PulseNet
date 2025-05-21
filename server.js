@@ -21,6 +21,7 @@ import { call_tools } from "./lib/chat_tools";
 import { toZonedTime } from 'date-fns-tz'
 import { buildCalendar } from "./lib/calendar.js";
 import { error } from "console";
+import mail from "./lib/mail.js";
 
 
 env.config();
@@ -772,24 +773,54 @@ app.get("/patient/appointments", async function(req,res){
 });
 
 app.get("/patient/listAppointments", async function(req,res){
-  // if(req.isAuthenticated() && req.user.role_id == 3){
+  if(req.isAuthenticated() && req.user.role_id == 3){
     const input = req.query?.input?.toLowerCase();
 
+    console.log(input);
     const today = toZonedTime(new Date(), "Asia/Beirut");
     const time = today.toTimeString().split(" ")[0];
     const date = today.toLocaleDateString("sv-SE", { timeZone: "Asia/Beirut" });
 
-    const [result] = await connection.query("Select sl.slot_id, d.first_name, d.last_name, sp.specialty_name, DATE_FORMAT(sl.slot_date,'%Y-%m-%d') as date, TIME_FORMAT(sl.start_time, '%h %i %p') as time, c.address from appointment_slots as sl inner join doctors as d on d.user_id = sl.doctor_id inner join clinics as c on c.clinic_id = sl.clinic_id inner join specialties as sp on d.specialty_id = sp.specialty_id where (LOWER(d.first_name) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(d.last_name) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(CONCAT(d.first_name, ' ', d.last_name)) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', ?, '%'))) AND is_booked = 0 AND sl.slot_date >= ? AND sl.start_time >= ?", [input, input, input, input, date, time]);
-
-    console.log(result);
-
-    res.json(result);
-  // }else{
-  //   console.log("HERE")
-  //   res.redirect("/login");
-  // }
+    if(input){
+      const [result] = await connection.query("Select sl.slot_id, d.first_name, d.last_name, sp.specialty_name, DATE_FORMAT(sl.slot_date,'%Y-%m-%d') as date, TIME_FORMAT(sl.start_time, '%h %i %p') as time, c.address from appointment_slots as sl inner join doctors as d on d.user_id = sl.doctor_id inner join clinics as c on c.clinic_id = sl.clinic_id inner join specialties as sp on d.specialty_id = sp.specialty_id where (LOWER(d.first_name) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(d.last_name) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(CONCAT(d.first_name, ' ', d.last_name)) LIKE LOWER(CONCAT('%', ?, '%')) OR LOWER(c.name) LIKE LOWER(CONCAT('%', ?, '%'))) AND is_booked = 0 AND sl.slot_date >= ? AND sl.start_time >= ?", [input, input, input, input, date, time]);
+      console.log(result);
+      res.json(result);
+    }else{
+      const [result] = await connection.query("Select sl.slot_id, d.first_name, d.last_name, sp.specialty_name, DATE_FORMAT(sl.slot_date,'%Y-%m-%d') as date, TIME_FORMAT(sl.start_time, '%h %i %p') as time, c.address from appointment_slots as sl inner join doctors as d on d.user_id = sl.doctor_id inner join clinics as c on c.clinic_id = sl.clinic_id inner join specialties as sp on d.specialty_id = sp.specialty_id where is_booked = 0 AND sl.slot_date >= ? AND sl.start_time >= ?", [date, time]);
+      console.log(result);
+      res.json(result);
+    }
+    
+  }else{
+    res.redirect("/login");
+  }
 });
 
+app.get("/patient/bookAppointment", async function(req,res){
+  if(req.isAuthenticated() && req.user.role_id == 3){
+      const slot_id = req.query?.slot_id;
+      const today = toZonedTime(new Date(), "Asia/Beirut");
+      const time = today.toTimeString().split(" ")[0];
+      const date = today.toLocaleDateString("sv-SE", { timeZone: "Asia/Beirut" });
+      const [slot_result] = await connection.query("Select * from appointment_slots where slot_id =? and is_booked = 0 AND slot_date >= ? AND start_time >= ?", [slot_id, date, time]);
+      if(slot_result.length != 0){
+        const [appointment_conflict] = await connection.query(`SELECT a.appointment_id FROM appointments a JOIN appointment_slots s ON a.slot_id = s.slot_id WHERE a.patient_id = ? AND s.slot_date = ? AND((s.start_time < ? AND s.end_time > ?) OR(s.start_time < ? AND s.end_time > ?))`,[req.user.user_id, slot_result[0].slot_date, slot_result[0].end_time, slot_result[0].start_time, slot_result[0].start_time, slot_result[0].end_time]);
+        if(appointment_conflict == 0){
+          await connection.query("Insert into appointments (slot_id, patient_id) VALUES (?,?)", [slot_result[0]["slot_id"], req.user.user_id]);
+          await connection.query("update appointment_slots set is_booked = 1 where slot_id = ?", [slot_result[0]["slot_id"]]);
+          await mail.sendDoctorAppointmentConfirmation(req.user.user_id, slot_result[0]["slot_id"]);
+          res.redirect("/patient");
+        }else{
+          res.render("patient/appointments.ejs", {errors: "Conflict Exists"});
+        }
+      }else{
+        res.render("patient/appointments.ejs", {errors: "Appointment already booked!"});
+      }
+    
+  }else{
+    res.redirect("/login");
+  }
+});
 //ChatBot
 
 app.get("/chat", async function (req, res) {
